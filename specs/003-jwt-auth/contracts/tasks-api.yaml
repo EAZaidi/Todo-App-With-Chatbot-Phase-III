@@ -1,0 +1,348 @@
+openapi: 3.1.0
+info:
+  title: Todo Tasks API (Backend)
+  description: |
+    Protected Task CRUD API endpoints on the FastAPI backend.
+    All endpoints require JWT authentication and enforce user isolation.
+  version: 2.0.0
+
+servers:
+  - url: /api
+    description: FastAPI backend
+
+security:
+  - bearerAuth: []
+
+paths:
+  /users/{user_id}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+
+    get:
+      operationId: listTasks
+      summary: List all tasks for a user
+      description: |
+        Returns all tasks owned by the specified user.
+        Requires JWT where `sub` claim matches `user_id` path parameter.
+      tags:
+        - Tasks
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      operationId: createTask
+      summary: Create a new task
+      description: |
+        Creates a new task for the specified user.
+        Requires JWT where `sub` claim matches `user_id` path parameter.
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{user_id}/tasks/{task_id}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+      - $ref: '#/components/parameters/TaskId'
+
+    get:
+      operationId: getTask
+      summary: Get a single task
+      description: |
+        Returns a specific task by ID.
+        Requires JWT where `sub` claim matches `user_id` path parameter.
+      tags:
+        - Tasks
+      responses:
+        '200':
+          description: Task retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateTask
+      summary: Update a task (full replacement)
+      description: |
+        Updates all fields of a task.
+        Requires JWT where `sub` claim matches `user_id` path parameter.
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: patchTask
+      summary: Partially update a task
+      description: |
+        Updates specific fields of a task.
+        Requires JWT where `sub` claim matches `user_id` path parameter.
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskPartialUpdate'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteTask
+      summary: Delete a task
+      description: |
+        Permanently deletes a task.
+        Requires JWT where `sub` claim matches `user_id` path parameter.
+      tags:
+        - Tasks
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token issued by Better Auth.
+        Include in Authorization header: `Bearer <token>`
+
+        Token must contain:
+        - `sub` claim matching the `user_id` path parameter
+        - Valid `exp` claim (not expired)
+        - Valid signature (verifiable via JWKS)
+
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      description: |
+        User ID. Must match the `sub` claim in the JWT token.
+        Requests where JWT `sub` does not match return 403 Forbidden.
+      schema:
+        type: string
+        example: usr_abc123xyz
+
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      description: Task ID
+      schema:
+        type: integer
+        example: 42
+
+  schemas:
+    TaskCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Task title (required, non-empty)
+          example: Buy groceries
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Task description (optional)
+          example: Milk, eggs, bread
+
+    TaskUpdate:
+      type: object
+      required:
+        - title
+        - completed
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Task title
+          example: Buy groceries (updated)
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Task description
+          example: Milk, eggs, bread, cheese
+        completed:
+          type: boolean
+          description: Completion status
+          example: true
+
+    TaskPartialUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Task title (if updating)
+          example: Buy groceries (updated)
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Task description (if updating)
+        completed:
+          type: boolean
+          description: Completion status (if updating)
+
+    TaskResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Task ID
+          example: 42
+        user_id:
+          type: string
+          description: Owner's user ID
+          example: usr_abc123xyz
+        title:
+          type: string
+          description: Task title
+          example: Buy groceries
+        description:
+          type: string
+          nullable: true
+          description: Task description
+          example: Milk, eggs, bread
+        completed:
+          type: boolean
+          description: Completion status
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    ErrorDetail:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: Task not found
+
+  responses:
+    BadRequest:
+      description: Invalid request body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetail'
+          example:
+            detail: "Title cannot be empty or whitespace"
+
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetail'
+          example:
+            detail: "Not authenticated"
+
+    Forbidden:
+      description: JWT user ID does not match requested resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetail'
+          example:
+            detail: "Access denied"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetail'
+          example:
+            detail: "Task not found"

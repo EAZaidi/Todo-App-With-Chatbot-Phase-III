@@ -1,0 +1,449 @@
+openapi: 3.1.0
+info:
+  title: Todo Backend API
+  description: |
+    RESTful backend service for todo task management with persistent storage.
+
+    **Phase**: Backend API & Persistence (Phase 1)
+    **Authentication**: None (user_id via path parameter; JWT in Phase 3)
+    **Database**: Neon Serverless PostgreSQL
+
+    All endpoints are scoped to a specific user via the `user_id` path parameter.
+  version: 1.0.0
+  contact:
+    name: Todo App Development Team
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.todo-app.example.com
+    description: Production server (future)
+
+paths:
+  /api/users/{user_id}/tasks:
+    get:
+      summary: Get all tasks for a user
+      description: Retrieves all tasks belonging to the specified user
+      operationId: list_user_tasks
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: Successful response with list of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskResponse'
+              examples:
+                empty_list:
+                  summary: No tasks for user
+                  value: []
+                with_tasks:
+                  summary: User with multiple tasks
+                  value:
+                    - id: 1
+                      user_id: "user123"
+                      title: "Buy groceries"
+                      description: "Milk, eggs, bread"
+                      completed: false
+                      created_at: "2026-01-09T10:00:00Z"
+                      updated_at: "2026-01-09T10:00:00Z"
+                    - id: 2
+                      user_id: "user123"
+                      title: "Write documentation"
+                      description: null
+                      completed: true
+                      created_at: "2026-01-09T11:00:00Z"
+                      updated_at: "2026-01-09T12:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create a new task
+      description: Creates a new task for the specified user
+      operationId: create_task
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+            examples:
+              minimal:
+                summary: Task with title only
+                value:
+                  title: "Buy groceries"
+              with_description:
+                summary: Task with title and description
+                value:
+                  title: "Write documentation"
+                  description: "Complete API documentation for all endpoints"
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                id: 1
+                user_id: "user123"
+                title: "Buy groceries"
+                description: "Milk, eggs, bread"
+                completed: false
+                created_at: "2026-01-09T10:00:00Z"
+                updated_at: "2026-01-09T10:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/users/{user_id}/tasks/{task_id}:
+    get:
+      summary: Get a specific task
+      description: Retrieves a single task by ID for the specified user
+      operationId: get_task
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/TaskIdParam'
+      responses:
+        '200':
+          description: Successful response with task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                id: 1
+                user_id: "user123"
+                title: "Buy groceries"
+                description: "Milk, eggs, bread"
+                completed: false
+                created_at: "2026-01-09T10:00:00Z"
+                updated_at: "2026-01-09T10:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Update a task (full update)
+      description: |
+        Performs a full update of a task. All fields must be provided.
+        Any field not provided will be set to its default value.
+      operationId: update_task
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+            example:
+              title: "Buy groceries and cook dinner"
+              description: "Milk, eggs, bread, chicken"
+              completed: false
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                id: 1
+                user_id: "user123"
+                title: "Buy groceries and cook dinner"
+                description: "Milk, eggs, bread, chicken"
+                completed: false
+                created_at: "2026-01-09T10:00:00Z"
+                updated_at: "2026-01-09T14:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      summary: Partially update a task
+      description: |
+        Updates only the fields provided in the request body.
+        Fields not included in the request will remain unchanged.
+      operationId: patch_task
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskPartialUpdate'
+            examples:
+              mark_complete:
+                summary: Mark task as complete
+                value:
+                  completed: true
+              update_title:
+                summary: Update only title
+                value:
+                  title: "Buy groceries and milk"
+              update_multiple:
+                summary: Update title and completion status
+                value:
+                  title: "Buy groceries"
+                  completed: true
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                id: 1
+                user_id: "user123"
+                title: "Buy groceries"
+                description: "Milk, eggs, bread"
+                completed: true
+                created_at: "2026-01-09T10:00:00Z"
+                updated_at: "2026-01-09T15:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete a task
+      description: Permanently deletes a task for the specified user
+      operationId: delete_task
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/TaskIdParam'
+      responses:
+        '204':
+          description: Task deleted successfully (no content)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    UserIdParam:
+      name: user_id
+      in: path
+      required: true
+      description: |
+        Unique identifier for the user. All task operations are scoped to this user.
+
+        **Phase 1**: Accepted as-is without verification (no authentication)
+        **Phase 3**: Will be validated against JWT token claims
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      example: "user123"
+
+    TaskIdParam:
+      name: task_id
+      in: path
+      required: true
+      description: Unique identifier for the task
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+
+  schemas:
+    TaskCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Task title (required, non-empty)
+          example: "Buy groceries"
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Detailed task information (optional)
+          example: "Milk, eggs, bread"
+
+    TaskUpdate:
+      type: object
+      required:
+        - title
+        - completed
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Task title (required, non-empty)
+          example: "Buy groceries and cook dinner"
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Detailed task information (optional)
+          example: "Milk, eggs, bread, chicken"
+        completed:
+          type: boolean
+          description: Task completion status
+          example: false
+
+    TaskPartialUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Task title (optional for PATCH)
+          example: "Buy groceries"
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Detailed task information (optional)
+          example: "Milk, eggs, bread"
+        completed:
+          type: boolean
+          description: Task completion status (optional for PATCH)
+          example: true
+
+    TaskResponse:
+      type: object
+      required:
+        - id
+        - user_id
+        - title
+        - completed
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Unique task identifier (auto-generated)
+          example: 1
+        user_id:
+          type: string
+          description: User who owns the task
+          example: "user123"
+        title:
+          type: string
+          description: Task title
+          example: "Buy groceries"
+        description:
+          type: string
+          nullable: true
+          description: Detailed task information
+          example: "Milk, eggs, bread"
+        completed:
+          type: boolean
+          description: Task completion status
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp (UTC)
+          example: "2026-01-09T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (UTC)
+          example: "2026-01-09T10:00:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+                properties:
+                  loc:
+                    type: array
+                    items:
+                      type: string
+                  msg:
+                    type: string
+                  type:
+                    type: string
+          description: Error message or validation error details
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            empty_title:
+              summary: Empty title validation error
+              value:
+                detail:
+                  - loc: ["body", "title"]
+                    msg: "Title cannot be empty or whitespace"
+                    type: "value_error"
+            title_too_long:
+              summary: Title exceeds maximum length
+              value:
+                detail:
+                  - loc: ["body", "title"]
+                    msg: "String should have at most 500 characters"
+                    type: "string_too_long"
+
+    NotFound:
+      description: Task not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "Task not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "Internal server error"
+
+tags:
+  - name: Tasks
+    description: Task management operations (CRUD)

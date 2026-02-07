@@ -1,0 +1,10 @@
+venv/
+tests/
+scripts/
+.env
+.env.example
+__pycache__/
+*.pyc
+*.md
+pytest.ini
+.git/

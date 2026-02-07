@@ -1,0 +1,323 @@
+openapi: 3.1.0
+info:
+  title: Better Auth API (Frontend)
+  description: |
+    Authentication API endpoints provided by Better Auth on the Next.js frontend.
+    These endpoints are automatically created by Better Auth and handle user registration,
+    sign-in, and JWT token issuance.
+  version: 1.0.0
+
+servers:
+  - url: /api/auth
+    description: Better Auth routes (frontend)
+
+paths:
+  /sign-up/email:
+    post:
+      operationId: signUpWithEmail
+      summary: Register a new user
+      description: Creates a new user account with email and password
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            set-auth-jwt:
+              description: JWT token for authenticated requests
+              schema:
+                type: string
+        '400':
+          description: Invalid request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sign-in/email:
+    post:
+      operationId: signInWithEmail
+      summary: Sign in with email and password
+      description: Authenticates user and returns session with JWT
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            set-auth-jwt:
+              description: JWT token for authenticated requests
+              schema:
+                type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sign-out:
+    post:
+      operationId: signOut
+      summary: Sign out current user
+      description: Invalidates the current session
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sign out successful
+        '401':
+          description: Not authenticated
+
+  /session:
+    get:
+      operationId: getSession
+      summary: Get current session
+      description: Returns current user session and refreshes JWT if needed
+      tags:
+        - Session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+          headers:
+            set-auth-jwt:
+              description: Refreshed JWT token
+              schema:
+                type: string
+        '401':
+          description: No active session
+
+  /token:
+    get:
+      operationId: getToken
+      summary: Get JWT token
+      description: Returns a fresh JWT token for the current session
+      tags:
+        - JWT
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Not authenticated
+
+  /jwks:
+    get:
+      operationId: getJwks
+      summary: Get JSON Web Key Set
+      description: Returns public keys for JWT verification
+      tags:
+        - JWT
+      responses:
+        '200':
+          description: JWKS retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwksResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SignUpRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: User's password (min 8 characters)
+          example: SecureP@ss123
+        name:
+          type: string
+          description: User's display name
+          example: John Doe
+
+    SignInRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          description: User's password
+          example: SecureP@ss123
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        session:
+          $ref: '#/components/schemas/Session'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+          example: usr_abc123xyz
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        emailVerified:
+          type: boolean
+          description: Whether email is verified
+          example: false
+        name:
+          type: string
+          description: User's display name
+          example: John Doe
+        image:
+          type: string
+          nullable: true
+          description: Profile image URL
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Session identifier
+        userId:
+          type: string
+          description: Associated user ID
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expiration time
+
+    SessionResponse:
+      type: object
+      properties:
+        session:
+          $ref: '#/components/schemas/Session'
+        user:
+          $ref: '#/components/schemas/User'
+
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token
+          example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    JwksResponse:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/Jwk'
+
+    Jwk:
+      type: object
+      description: JSON Web Key
+      properties:
+        kty:
+          type: string
+          description: Key type
+          example: RSA
+        use:
+          type: string
+          description: Key use
+          example: sig
+        kid:
+          type: string
+          description: Key ID
+          example: key_abc123
+        alg:
+          type: string
+          description: Algorithm
+          example: RS256
+        n:
+          type: string
+          description: RSA modulus (base64url)
+        e:
+          type: string
+          description: RSA exponent (base64url)
+          example: AQAB
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid email or password
