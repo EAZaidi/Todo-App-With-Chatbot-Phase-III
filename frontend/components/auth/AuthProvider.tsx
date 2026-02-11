@@ -53,6 +53,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const { data: session, isPending } = useSession();
   const [token, setToken] = useState<string | null>(null);
+  const [checkedStorage, setCheckedStorage] = useState(false);
 
   // Initialize token from storage on mount
   useEffect(() => {
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (storedToken) {
       setToken(storedToken);
     }
+    setCheckedStorage(true);
   }, []);
 
   // Update token and user ID when session changes
@@ -87,12 +89,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       throw new Error(result.error.message || "Sign in failed");
     }
 
-    // Fetch JWT token from the token endpoint after sign-in
+    // Store user ID
+    if (result.data?.user?.id) {
+      setUserId(result.data.user.id);
+    }
+
+    // Fetch JWT token from the token endpoint after sign-in (non-blocking)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     try {
       const tokenResponse = await fetch("/api/auth/token", {
         method: "GET",
         credentials: "include",
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (tokenResponse.ok) {
         const tokenData = await tokenResponse.json();
         if (tokenData.token) {
@@ -101,12 +112,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
     } catch (e) {
+      clearTimeout(timeoutId);
       console.error("Failed to fetch JWT token:", e);
-    }
-
-    // Store user ID
-    if (result.data?.user?.id) {
-      setUserId(result.data.user.id);
     }
   }, []);
 
@@ -122,12 +129,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error(result.error.message || "Sign up failed");
       }
 
-      // Fetch JWT token from the token endpoint after sign-up
+      // Store user ID
+      if (result.data?.user?.id) {
+        setUserId(result.data.user.id);
+      }
+
+      // Fetch JWT token from the token endpoint after sign-up (non-blocking)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       try {
         const tokenResponse = await fetch("/api/auth/token", {
           method: "GET",
           credentials: "include",
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         if (tokenResponse.ok) {
           const tokenData = await tokenResponse.json();
           if (tokenData.token) {
@@ -136,12 +152,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         }
       } catch (e) {
+        clearTimeout(timeoutId);
         console.error("Failed to fetch JWT token:", e);
-      }
-
-      // Store user ID
-      if (result.data?.user?.id) {
-        setUserId(result.data.user.id);
       }
     },
     []
@@ -164,11 +176,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     : null;
 
+  // Only block UI while loading if user might be authenticated (has stored token).
+  // Non-authenticated visitors see the welcome screen immediately instead of
+  // waiting for the Neon DB session check to complete.
+  const isLoading = isPending && (!checkedStorage || !!token);
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        isLoading: isPending,
+        isLoading,
         token,
         signIn: handleSignIn,
         signUp: handleSignUp,

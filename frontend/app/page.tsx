@@ -3,6 +3,7 @@
 import { TaskListContainer } from '@/components/TaskListContainer';
 import { Navbar } from '@/components/Navbar';
 import { useLanguage } from '@/components/LanguageProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Poppins } from 'next/font/google';
 import { CheckCircle2, Shield, Zap, Clock } from 'lucide-react';
 
@@ -33,6 +34,7 @@ function StatCard({ value, label }: { value: string; label: string }) {
 
 export default function Home() {
   const { t } = useLanguage();
+  const { user } = useAuth();
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -92,12 +94,20 @@ export default function Home() {
           <h2 className="text-xl font-bold text-white mb-2">{t('home.ctaTitle')}</h2>
           <p className="text-white/70 text-sm mb-6">{t('home.ctaSubtitle')}</p>
           <div className="flex justify-center gap-3">
-            <a href="/sign-up" className="px-6 py-2.5 bg-white text-indigo-600 font-semibold rounded-lg text-sm hover:bg-white/90 transition-colors shadow-lg">
-              {t('home.createFreeAccount')}
-            </a>
-            <a href="/sign-in" className="px-6 py-2.5 bg-white/10 text-white font-medium rounded-lg text-sm hover:bg-white/20 transition-colors border border-white/20">
-              {t('home.signIn')}
-            </a>
+            {user ? (
+              <span className="px-6 py-2.5 bg-white text-indigo-600 font-semibold rounded-lg text-sm shadow-lg">
+                {t('home.chatHint') || 'Use the chat icon in the bottom-right corner'}
+              </span>
+            ) : (
+              <>
+                <a href="/sign-up" className="px-6 py-2.5 bg-white text-indigo-600 font-semibold rounded-lg text-sm hover:bg-white/90 transition-colors shadow-lg">
+                  {t('home.createFreeAccount')}
+                </a>
+                <a href="/sign-in" className="px-6 py-2.5 bg-white/10 text-white font-medium rounded-lg text-sm hover:bg-white/20 transition-colors border border-white/20">
+                  {t('home.signIn')}
+                </a>
+              </>
+            )}
           </div>
         </div>
       </section>

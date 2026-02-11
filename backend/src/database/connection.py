@@ -45,6 +45,9 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         # Import all models here to ensure they're registered with SQLModel
         from src.models.task import Task  # noqa: F401
+        from src.models.conversation import Conversation  # noqa: F401
+        from src.models.message import Message  # noqa: F401
+        from src.models.tool_log import ToolInvocationLog  # noqa: F401
 
         # Create all tables
         await conn.run_sync(SQLModel.metadata.create_all)

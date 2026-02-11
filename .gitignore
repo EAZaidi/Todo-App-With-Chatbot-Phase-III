@@ -71,3 +71,6 @@ out/
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+nul
+_err.txt
+cookies.txt
