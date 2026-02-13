@@ -41,6 +41,8 @@ export const auth = betterAuth({
     "http://localhost:3002",
     "http://localhost:3003",
     "http://localhost:8000",
+    "https://essaabbas-todo-app-with-chatbot-phase-3.hf.space",
+    "https://todo-app-with-chatbot-xi.vercel.app",
     process.env.BETTER_AUTH_URL || "http://localhost:3003",
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
   ],
