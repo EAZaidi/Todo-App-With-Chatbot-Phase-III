@@ -99,7 +99,7 @@ export function TaskForm({ onSubmit, isSubmitting, error }: TaskFormProps) {
                   maxLength={500}
                 />
                 {title.length > 0 && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+                  <span className="absolute right-4 rtl:right-auto rtl:left-4 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
                     {title.length}/500
                   </span>
                 )}
@@ -125,7 +125,7 @@ export function TaskForm({ onSubmit, isSubmitting, error }: TaskFormProps) {
                     autoFocus
                   />
                   {description.length > 0 && (
-                    <span className="absolute right-4 bottom-4 text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+                    <span className="absolute right-4 rtl:right-auto rtl:left-4 bottom-4 text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
                       {description.length}/5000
                     </span>
                   )}
