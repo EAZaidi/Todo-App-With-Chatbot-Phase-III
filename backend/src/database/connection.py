@@ -15,8 +15,15 @@ from src.config import settings
 # For Neon serverless: use NullPool to avoid connection pooling issues
 from sqlalchemy.pool import NullPool
 
+def _get_async_url(url: str) -> str:
+    """Ensure the DATABASE_URL uses the asyncpg driver."""
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    _get_async_url(settings.DATABASE_URL),
     echo=settings.is_development,
     future=True,
     poolclass=NullPool,  # NullPool recommended for serverless
